@@ -9,16 +9,23 @@ st.title("Stock Prices Data Viewer v0.0.1")
 # Snowflake connection details
 @st.cache_resource
 def create_snowflake_connection():
-    conn = snowflake.connector.connect(
-        user=st.secrets["snowflake"]["user"],
-        password=st.secrets["snowflake"]["password"],
-        account=st.secrets["snowflake"]["account"],
-        role=st.secrets["snowflake"]["role"],
-        warehouse=st.secrets["snowflake"]["warehouse"],
-        database=st.secrets["snowflake"]["database"],
-        schema=st.secrets["snowflake"]["schema"]
-    )
-    return conn
+    try:
+        conn = snowflake.connector.connect(
+            user=st.secrets["snowflake"]["user"],
+            password=st.secrets["snowflake"]["password"],
+            account=st.secrets["snowflake"]["account"],
+            role=st.secrets["snowflake"]["role"],
+            warehouse=st.secrets["snowflake"]["warehouse"],
+            database=st.secrets["snowflake"]["database"],
+            schema=st.secrets["snowflake"]["schema"]
+        )
+        return conn
+    except snowflake.connector.errors.ProgrammingError as e:
+        st.error(f"Programming error: {e}")
+    except snowflake.connector.errors.DatabaseError as e:
+        st.error(f"Database error: {e}")
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")    
 
 # Fetch data from Snowflake
 def fetch_stock_prices():
@@ -39,20 +46,17 @@ if st.button('Load Stock Prices Data'):
 if st.button('Visualize Open and Close Prices'):
     with st.spinner("Loading data for visualization..."):
         data = fetch_stock_prices()
+        df = pd.DataFrame(data)
         
-        if not data.empty:
-            # Plotting open and close prices
-            plt.figure(figsize=(10, 5))
-            plt.plot(data['trade_date'], data['open_price'], label='Open Price', marker='o')
-            plt.plot(data['trade_date'], data['close_price'], label='Close Price', marker='x')
-            plt.title('Open vs Close Prices')
-            plt.xlabel('Trade Date')
-            plt.ylabel('Price')
-            plt.xticks(rotation=45)
-            plt.legend()
-            plt.tight_layout()
-            
-            # Display the plot in Streamlit
-            st.pyplot(plt)
-        else:
-            st.write("No data available for visualization.")
+        plt.figure(figsize=(10, 5))
+        plt.plot(data['trade_date'], data['open_price'], label='Open Price', marker='o')
+        plt.plot(data['trade_date'], data['close_price'], label='Close Price', marker='x')
+        plt.title('Open vs Close Prices')
+        plt.xlabel('Trade Date')
+        plt.ylabel('Price')
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.tight_layout()
+        
+        # Display the plot in Streamlit
+        st.pyplot(plt)
